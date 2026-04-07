@@ -42,7 +42,7 @@ return [
     ],
 
     'external_license_api' => [
-        'url' => env('EXTERNAL_LICENSE_API_URL', ''),
+        'url' => 'https://license-server.envaysoft.com',
         'key' => env('EXTERNAL_LICENSE_API_KEY', ''),
         'enabled' => (bool) env('EXTERNAL_LICENSE_API_ENABLED', false),
         'fallback_to_external' => (bool) env('EXTERNAL_LICENSE_API_FALLBACK', true),

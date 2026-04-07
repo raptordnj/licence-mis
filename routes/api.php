@@ -10,11 +10,13 @@ use App\Http\Controllers\Admin\AdminManagedLicenseCrudController;
 use App\Http\Controllers\Admin\AdminProductCrudController;
 use App\Http\Controllers\Admin\AdminPurchaseController;
 use App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\Admin\AdminUpdateReleaseController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminValidationLogController;
 use App\Http\Controllers\Admin\LicenseAdminController;
 use App\Http\Controllers\Admin\TwoFactorController;
 use App\Http\Controllers\Api\LicenseManagementController;
+use App\Http\Controllers\Api\PublicUpdateReleaseController;
 use App\Http\Controllers\Api\V1\LicenseVerificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +26,13 @@ Route::post('/licenses/auto-issue', [LicenseManagementController::class, 'autoIs
     ->middleware('throttle:public-license-verify');
 Route::post('/licenses/deactivate', [LicenseManagementController::class, 'deactivate'])
     ->middleware('throttle:public-license-deactivate');
+Route::post('/licenses/domain-validity', [LicenseManagementController::class, 'domainValidity'])
+    ->middleware('throttle:public-license-verify');
+Route::get('/updates/manifest', [PublicUpdateReleaseController::class, 'manifest'])
+    ->middleware('throttle:public-update-manifest');
+Route::get('/updates/releases/{updateRelease}/download', [PublicUpdateReleaseController::class, 'download'])
+    ->name('updates.releases.download')
+    ->middleware('throttle:public-update-download');
 
 Route::prefix('v1')->group(function (): void {
     Route::post('/licenses/verify', [LicenseVerificationController::class, 'verify'])
@@ -49,6 +58,7 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/items', [AdminEnvatoItemController::class, 'index']);
             Route::post('/items', [AdminEnvatoItemController::class, 'store']);
+            Route::get('/items/{envatoItem}', [AdminEnvatoItemController::class, 'show']);
             Route::put('/items/{envatoItem}', [AdminEnvatoItemController::class, 'update']);
             Route::get('/purchases', [AdminPurchaseController::class, 'index']);
             Route::get('/purchases/{license}', [AdminPurchaseController::class, 'show']);
@@ -56,6 +66,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/licenses/{license}', [LicenseAdminController::class, 'show']);
             Route::post('/licenses/{license}/revoke', [LicenseAdminController::class, 'revoke']);
             Route::post('/licenses/{license}/reset-domain', [LicenseAdminController::class, 'resetDomain']);
+            Route::post('/licenses/{license}/reset-activations', [LicenseAdminController::class, 'resetActivations']);
             Route::get('/validation-logs', [AdminValidationLogController::class, 'index']);
             Route::get('/users', [AdminUserController::class, 'index']);
             Route::post('/users', [AdminUserController::class, 'store']);
@@ -64,6 +75,10 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/settings', [AdminSettingsController::class, 'show']);
             Route::put('/settings', [AdminSettingsController::class, 'update']);
             Route::get('/settings/test-envato-token', [AdminSettingsController::class, 'testEnvatoToken']);
+            Route::get('/update-releases', [AdminUpdateReleaseController::class, 'index']);
+            Route::post('/update-releases', [AdminUpdateReleaseController::class, 'store']);
+            Route::put('/update-releases/{updateRelease}', [AdminUpdateReleaseController::class, 'update']);
+            Route::delete('/update-releases/{updateRelease}', [AdminUpdateReleaseController::class, 'destroy']);
 
             Route::post('/2fa/setup', [TwoFactorController::class, 'setup']);
             Route::post('/2fa/confirm', [TwoFactorController::class, 'confirm']);

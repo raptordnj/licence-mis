@@ -11,13 +11,13 @@ use App\Data\Requests\PublicLicenseDeactivateRequestData;
 use App\Data\Requests\PublicLicenseVerifyRequestData;
 use App\Enums\LicenseInstanceStatus;
 use App\Enums\LicenseStatus;
+use App\Enums\ProductStatus;
 use App\Enums\LicenseValidationReason;
 use App\Models\License;
 use App\Models\LicenseInstance;
 use App\Models\Product;
 use App\Repositories\LicenseManagerLicenseRepository;
 use App\Repositories\LicenseManagerProductRepository;
-use App\Services\Contracts\EnvatoPurchaseValidatorInterface;
 use App\Support\LicenseRequestNormalizer;
 use InvalidArgumentException;
 
@@ -27,7 +27,7 @@ readonly class LicenseManagementService
         private LicenseManagerProductRepository $productRepository,
         private LicenseManagerLicenseRepository $licenseRepository,
         private LicenseRequestNormalizer $requestNormalizer,
-        private EnvatoPurchaseValidatorInterface $purchaseValidator,
+        private LicenseVerificationService $licenseVerificationService,
     ) {
     }
 
@@ -39,25 +39,39 @@ readonly class LicenseManagementService
         $domain = $this->requestNormalizer->normalizeDomain($request->domain);
         $appUrl = $this->requestNormalizer->normalizeAppUrl($request->appUrl);
 
+        $purchaseCode = $this->licenseVerificationService->normalizePurchaseCode($request->purchaseCode);
         $product = $this->productRepository->findByIdentifier($request->productId, $request->envatoItemId);
-
-        if ($product === null || ! $product->isActive()) {
-            return new LicenseVerificationDecisionData(
-                status: 'invalid',
-                reason: LicenseValidationReason::NOT_FOUND,
-                productId: $request->productId ?? 0,
-                instanceId: $request->instanceId,
-                domain: $domain,
-                instance: null,
-            );
-        }
-
+        $licenseByPurchaseCode = $this->licenseRepository->findByPurchaseCode($purchaseCode);
+        $product = $this->resolveProductForVerification($product, $licenseByPurchaseCode);
         $validationResult = null;
         $license = null;
+
+        if ($product === null || ! $product->isActive()) {
+            $resolvedWithoutProduct = $this->licenseVerificationService->resolveForUnknownProduct($purchaseCode);
+            $product = $resolvedWithoutProduct->product;
+            $license = $resolvedWithoutProduct->license;
+            $validationResult = $resolvedWithoutProduct->validationResult;
+
+            if (
+                ! $product instanceof Product
+                || ! $product->isActive()
+                || $resolvedWithoutProduct->hasFailure()
+            ) {
+                return new LicenseVerificationDecisionData(
+                    status: 'invalid',
+                    reason: $resolvedWithoutProduct->failureReason ?? LicenseValidationReason::NOT_FOUND,
+                    productId: $request->productId ?? 0,
+                    instanceId: $request->instanceId,
+                    domain: $domain,
+                    instance: null,
+                );
+            }
+        }
+
         $domainLicense = $this->licenseRepository->findByActiveDomainAndProduct($domain, $product->id);
 
         if ($domainLicense instanceof License) {
-            if ($domainLicense->purchase_code !== $request->purchaseCode) {
+            if (! $this->licenseVerificationService->purchaseCodesMatch($domainLicense->purchase_code, $purchaseCode)) {
                 return new LicenseVerificationDecisionData(
                     status: 'invalid',
                     reason: LicenseValidationReason::DOMAIN_MISMATCH,
@@ -69,58 +83,36 @@ readonly class LicenseManagementService
             }
 
             $license = $domainLicense;
-        } else {
-            $license = $this->licenseRepository->findByPurchaseCodeAndProduct($request->purchaseCode, $product->id);
         }
 
         if (! $license instanceof License) {
-            $validationResult = $this->purchaseValidator->validate(
-                purchaseCode: $request->purchaseCode,
-                envatoItemId: $product->envato_item_id,
+            $resolvedLicense = $this->licenseVerificationService->resolveForProduct($purchaseCode, $product);
+            $product = $resolvedLicense->product ?? $product;
+            $validationResult = $resolvedLicense->validationResult;
+
+            if ($resolvedLicense->hasFailure()) {
+                return new LicenseVerificationDecisionData(
+                    status: 'invalid',
+                    reason: $resolvedLicense->failureReason ?? LicenseValidationReason::NOT_FOUND,
+                    productId: $product->id,
+                    instanceId: $request->instanceId,
+                    domain: $domain,
+                    instance: null,
+                );
+            }
+
+            $license = $resolvedLicense->license;
+        }
+
+        if (! $license instanceof License) {
+            return new LicenseVerificationDecisionData(
+                status: 'invalid',
+                reason: LicenseValidationReason::NOT_FOUND,
                 productId: $product->id,
+                instanceId: $request->instanceId,
+                domain: $domain,
+                instance: null,
             );
-
-            if (! $validationResult->valid) {
-                return new LicenseVerificationDecisionData(
-                    status: 'invalid',
-                    reason: $validationResult->reason,
-                    productId: $product->id,
-                    instanceId: $request->instanceId,
-                    domain: $domain,
-                    instance: null,
-                );
-            }
-
-            $licenseByPurchaseCode = $this->licenseRepository->findByPurchaseCode($request->purchaseCode);
-
-            if (
-                $licenseByPurchaseCode instanceof License
-                && $licenseByPurchaseCode->product_id !== null
-                && $licenseByPurchaseCode->product_id !== $product->id
-            ) {
-                return new LicenseVerificationDecisionData(
-                    status: 'invalid',
-                    reason: LicenseValidationReason::NOT_FOUND,
-                    productId: $product->id,
-                    instanceId: $request->instanceId,
-                    domain: $domain,
-                    instance: null,
-                );
-            }
-
-            if ($licenseByPurchaseCode instanceof License) {
-                $license = $this->licenseRepository->attachProductAndValidation(
-                    license: $licenseByPurchaseCode,
-                    product: $product,
-                    validationResult: $validationResult,
-                );
-            } else {
-                $license = $this->licenseRepository->createFromValidation(
-                    purchaseCode: $request->purchaseCode,
-                    product: $product,
-                    validationResult: $validationResult,
-                );
-            }
         }
 
         $domainRestrictions = $this->resolveDomainRestrictions($license, $validationResult);
@@ -315,9 +307,46 @@ readonly class LicenseManagementService
         );
     }
 
-    /**
-     * @return array<int, string>
-     */
+    public function resolveApiDomainValidity(string $domain): array
+    {
+        $normalizedDomain = $this->requestNormalizer->normalizeDomain($domain);
+        $validLicenseStatuses = [
+            LicenseStatus::ACTIVE->value,
+            LicenseStatus::VALID->value,
+        ];
+
+        $hasValidBoundDomain = License::query()
+            ->where('bound_domain', $normalizedDomain)
+            ->whereIn('status', $validLicenseStatuses)
+            ->whereHas('product', static function ($query): void {
+                $query->where('status', ProductStatus::ACTIVE->value);
+            })
+            ->exists();
+
+        if ($hasValidBoundDomain) {
+            return [
+                'domain' => $normalizedDomain,
+                'valid' => true,
+            ];
+        }
+
+        $hasValidActiveInstance = LicenseInstance::query()
+            ->where('status', LicenseInstanceStatus::ACTIVE->value)
+            ->where('domain', $normalizedDomain)
+            ->whereHas('license', static function ($query) use ($validLicenseStatuses): void {
+                $query->whereIn('status', $validLicenseStatuses)
+                    ->whereHas('product', static function ($productQuery): void {
+                        $productQuery->where('status', ProductStatus::ACTIVE->value);
+                    });
+            })
+            ->exists();
+
+        return [
+            'domain' => $normalizedDomain,
+            'valid' => $hasValidActiveInstance,
+        ];
+    }
+
     private function resolveDomainRestrictions(License $license, ?ValidationResultDTO $validationResult): array
     {
         $domainRestrictions = $validationResult instanceof ValidationResultDTO
@@ -381,5 +410,61 @@ readonly class LicenseManagementService
         $license->forceFill([
             'bound_domain' => $activeDomain,
         ])->save();
+    }
+
+    private function resolveProductForVerification(?Product $requestedProduct, ?License $licenseByPurchaseCode): ?Product
+    {
+        $product = $requestedProduct;
+
+        if (! $licenseByPurchaseCode instanceof License) {
+            return $product;
+        }
+
+        $productFromLicense = $this->resolveProductFromLicense($licenseByPurchaseCode);
+
+        if (! $product instanceof Product) {
+            return $productFromLicense;
+        }
+
+        if (! $product->isActive() && $productFromLicense instanceof Product && $productFromLicense->isActive()) {
+            return $productFromLicense;
+        }
+
+        if (
+            $licenseByPurchaseCode->product_id !== null
+            && $licenseByPurchaseCode->product_id !== $product->id
+            && $productFromLicense instanceof Product
+            && $productFromLicense->isActive()
+        ) {
+            return $productFromLicense;
+        }
+
+        if (
+            $licenseByPurchaseCode->envato_item_id !== null
+            && $licenseByPurchaseCode->envato_item_id !== $product->envato_item_id
+            && $productFromLicense instanceof Product
+            && $productFromLicense->isActive()
+        ) {
+            return $productFromLicense;
+        }
+
+        return $product;
+    }
+
+    private function resolveProductFromLicense(License $license): ?Product
+    {
+        if ($license->product_id !== null) {
+            $product = $this->productRepository->findById($license->product_id);
+
+            if ($product instanceof Product) {
+                return $product;
+            }
+        }
+
+        if ($license->envato_item_id !== null) {
+            return $this->productRepository->findByIdentifier(null, $license->envato_item_id);
+        }
+
+        return null;
     }
 }

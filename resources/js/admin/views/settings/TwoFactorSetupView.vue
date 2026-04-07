@@ -18,12 +18,12 @@
             </div>
 
             <div v-if="settingsStore.twoFactorSetup !== null" class="grid gap-4 lg:grid-cols-2">
-                <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Authenticator QR</p>
+                <div class="glass rounded-xl p-4">
+                    <p class="type-label">Authenticator QR</p>
                     <img v-if="qrDataUrl !== ''" :src="qrDataUrl" alt="TOTP QR code" class="mt-2 w-full max-w-[280px] rounded-lg bg-white p-2" />
                     <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">Secret: <code>{{ settingsStore.twoFactorSetup.secret }}</code></p>
                 </div>
-                <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                <div class="glass rounded-xl p-4">
                     <UiInput v-model="code" label="Enter 6-digit code" placeholder="123456" />
                     <UiButton class="mt-3" :loading="settingsStore.saving" @click="confirmTwoFactor">Confirm 2FA</UiButton>
                 </div>

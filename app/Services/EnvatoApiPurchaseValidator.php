@@ -58,6 +58,7 @@ readonly class EnvatoApiPurchaseValidator implements EnvatoPurchaseValidatorInte
             domainRestrictions: [],
             source: 'envato_api',
             matchedBy: 'envato_api_match',
+            rawPayload: $purchase,
         );
     }
 
@@ -67,87 +68,108 @@ readonly class EnvatoApiPurchaseValidator implements EnvatoPurchaseValidatorInte
     private function fetchPurchase(string $purchaseCode): ?array
     {
         $cacheTtl = (int) config('services.envato.cache_ttl_seconds', 300);
+        $cacheKey = 'envato:verify:'.mb_strtolower($purchaseCode);
 
-        /** @var array<string, mixed>|null $purchase */
-        $purchase = Cache::remember(
-            "envato:verify:{$purchaseCode}",
-            $cacheTtl,
-            function () use ($purchaseCode): ?array {
-                $token = $this->sensitiveSettingsStore->getEnvatoToken() ?: (string) config('services.envato.token');
+        /** @var mixed $cached */
+        $cached = Cache::get($cacheKey);
 
-                if ($token === '') {
-                    throw new EnvatoUnavailableException('Envato token is not configured.');
-                }
+        if (is_array($cached)) {
+            /** @var array<string, mixed> $cached */
+            return $cached;
+        }
 
-                $authorizationRejected = false;
-                $authorizationRejections = [];
+        $purchase = $this->requestPurchaseFromEnvato($purchaseCode);
 
-                foreach ($this->verificationEndpoints($purchaseCode) as $endpoint) {
-                    $response = Http::baseUrl((string) config('services.envato.base_url'))
-                        ->withToken($token)
-                        ->acceptJson()
-                        ->timeout(10)
-                        ->retry(2, 200, throw: false)
-                        ->get($endpoint['path'], $endpoint['query']);
-
-                    if (in_array($response->status(), [401, 403], true)) {
-                        $responseError = $this->extractResponseErrorMessage($response->json(), $response->body());
-                        $authorizationRejections[] = [
-                            'endpoint' => $endpoint['path'],
-                            'error' => $responseError,
-                        ];
-
-                        Log::warning('Envato endpoint rejected token for purchase verification.', [
-                            'endpoint' => $endpoint['path'],
-                            'status' => $response->status(),
-                            'purchase_code_hint' => $this->maskPurchaseCode($purchaseCode),
-                            'envato_error' => $responseError,
-                        ]);
-
-                        $authorizationRejected = true;
-
-                        continue;
-                    }
-
-                    if ($response->status() === 404) {
-                        return null;
-                    }
-
-                    if (! $response->successful()) {
-                        continue;
-                    }
-
-                    $purchasePayload = $this->extractPurchasePayload($response->json());
-
-                    if (! is_array($purchasePayload)) {
-                        return null;
-                    }
-
-                    return $purchasePayload;
-                }
-
-                if ($authorizationRejected) {
-                    $joinedReasons = collect($authorizationRejections)
-                        ->map(static function (array $rejection): string {
-                            $endpoint = is_string(data_get($rejection, 'endpoint')) ? (string) data_get($rejection, 'endpoint') : 'unknown';
-                            $error = is_string(data_get($rejection, 'error')) ? (string) data_get($rejection, 'error') : 'permission denied';
-
-                            return "{$endpoint}: {$error}";
-                        })
-                        ->implode(' | ');
-
-                    throw new EnvatoUnavailableException(
-                        $joinedReasons !== ''
-                            ? "Envato rejected token permissions. {$joinedReasons}"
-                            : 'Envato token is valid but missing one of the required Envato scopes (sale:verify, purchase:verify, purchase:list).',
-                    );
-                }
-
-                throw new EnvatoUnavailableException();
-            },
-        );
+        if (is_array($purchase)) {
+            Cache::put($cacheKey, $purchase, $cacheTtl);
+        }
 
         return $purchase;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function requestPurchaseFromEnvato(string $purchaseCode): ?array
+    {
+        $token = $this->sensitiveSettingsStore->getEnvatoToken() ?: (string) config('services.envato.token');
+
+        if ($token === '') {
+            throw new EnvatoUnavailableException('Envato token is not configured.');
+        }
+
+        $authorizationRejected = false;
+        $authorizationRejections = [];
+        $notFoundReturned = false;
+
+        foreach ($this->verificationEndpoints($purchaseCode) as $endpoint) {
+            $response = Http::baseUrl((string) config('services.envato.base_url'))
+                ->withToken($token)
+                ->acceptJson()
+                ->timeout(10)
+                ->retry(2, 200, throw: false)
+                ->get($endpoint['path'], $endpoint['query']);
+
+            if (in_array($response->status(), [401, 403], true)) {
+                $responseError = $this->extractResponseErrorMessage($response->json(), $response->body());
+                $authorizationRejections[] = [
+                    'endpoint' => $endpoint['path'],
+                    'error' => $responseError,
+                ];
+
+                Log::warning('Envato endpoint rejected token for purchase verification.', [
+                    'endpoint' => $endpoint['path'],
+                    'status' => $response->status(),
+                    'purchase_code_hint' => $this->maskPurchaseCode($purchaseCode),
+                    'envato_error' => $responseError,
+                ]);
+
+                $authorizationRejected = true;
+
+                continue;
+            }
+
+            if ($response->status() === 404) {
+                $notFoundReturned = true;
+
+                continue;
+            }
+
+            if (! $response->successful()) {
+                continue;
+            }
+
+            $purchasePayload = $this->extractPurchasePayload($response->json());
+
+            if (! is_array($purchasePayload)) {
+                return null;
+            }
+
+            return $purchasePayload;
+        }
+
+        if ($notFoundReturned) {
+            return null;
+        }
+
+        if ($authorizationRejected) {
+            $joinedReasons = collect($authorizationRejections)
+                ->map(static function (array $rejection): string {
+                    $endpoint = is_string(data_get($rejection, 'endpoint')) ? (string) data_get($rejection, 'endpoint') : 'unknown';
+                    $error = is_string(data_get($rejection, 'error')) ? (string) data_get($rejection, 'error') : 'permission denied';
+
+                    return "{$endpoint}: {$error}";
+                })
+                ->implode(' | ');
+
+            throw new EnvatoUnavailableException(
+                $joinedReasons !== ''
+                    ? "Envato rejected token permissions. {$joinedReasons}"
+                    : 'Envato token is valid but missing one of the required Envato scopes (sale:verify, purchase:verify, purchase:list).',
+            );
+        }
+
+        throw new EnvatoUnavailableException();
     }
 
     /**

@@ -12,24 +12,24 @@
 
         <ErrorBanner v-if="dashboardStore.error !== null" :message="dashboardStore.error.message" />
 
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <UiCard v-for="metric in metrics" :key="metric.label">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ metric.label }}</p>
-                <p class="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">{{ metric.value }}</p>
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <UiCard v-for="metric in metrics" :key="metric.label" class="accent-strip">
+                <p class="type-label">{{ metric.label }}</p>
+                <p class="mt-2 font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{{ metric.value }}</p>
             </UiCard>
         </div>
 
         <div class="grid gap-4 xl:grid-cols-3">
             <UiCard class="xl:col-span-2">
-                <div class="mb-3 flex items-center justify-between gap-2">
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Checks Over Time</h2>
+                <div class="mb-4 flex items-center justify-between gap-2">
+                    <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Checks Over Time</h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400">Success vs failures</p>
                 </div>
                 <svg viewBox="0 0 600 260" class="h-64 w-full">
                     <polyline
                         fill="none"
                         stroke="currentColor"
-                        class="text-cyan-500"
+                        class="text-violet-500"
                         stroke-width="3"
                         :points="checksPolyline"
                     />
@@ -42,20 +42,20 @@
                     />
                 </svg>
                 <div class="mt-2 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                    <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-cyan-500"></span>Checks</span>
+                    <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-violet-500"></span>Checks</span>
                     <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-rose-500"></span>Failures</span>
                 </div>
             </UiCard>
 
             <UiCard>
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Top Failure Reasons</h2>
+                <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Top Failure Reasons</h2>
                 <ul class="mt-3 space-y-2">
                     <li v-for="reason in dashboardStore.payload.top_failure_reasons" :key="reason.reason" class="space-y-1">
                         <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                             <span>{{ reason.reason }}</span>
                             <span>{{ reason.count }}</span>
                         </div>
-                        <div class="h-2 rounded-full bg-slate-200 dark:bg-slate-800">
+                        <div class="h-2 rounded-full bg-slate-200/60 dark:bg-slate-800/60">
                             <span
                                 class="block h-2 rounded-full bg-rose-500"
                                 :style="{ width: `${(reason.count / maxFailureCount) * 100}%` }"
@@ -68,8 +68,8 @@
 
         <div class="grid gap-4 lg:grid-cols-2">
             <UiCard>
-                <div class="mb-3 flex items-center justify-between">
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Top Domains by Checks</h2>
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Top Domains by Checks</h2>
                 </div>
                 <DataTable
                     :columns="domainColumns"
@@ -81,12 +81,12 @@
             </UiCard>
 
             <UiCard>
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Recent Activity</h2>
+                <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Recent Activity</h2>
                 <ul class="mt-3 space-y-2">
                     <li
                         v-for="activity in dashboardStore.payload.recent_activity"
                         :key="activity.id"
-                        class="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800"
+                        class="glass rounded-xl p-3 text-sm"
                     >
                         <p class="font-medium text-slate-800 dark:text-slate-100">{{ activity.title }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -98,7 +98,7 @@
         </div>
 
         <UiCard>
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Quick Actions</h2>
+            <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Quick Actions</h2>
             <div class="mt-3 flex flex-wrap gap-2">
                 <UiButton variant="secondary" @click="goTo('/admin/checker')">Verify Purchase Code</UiButton>
                 <UiButton variant="secondary" @click="goTo('/admin/items')">Create Item</UiButton>

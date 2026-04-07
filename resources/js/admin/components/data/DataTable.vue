@@ -1,21 +1,21 @@
 <template>
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div class="glass overflow-hidden rounded-2xl shadow-sm">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-                <thead class="bg-slate-50 dark:bg-slate-900/40">
+            <table class="min-w-full divide-y divide-white/10 text-sm dark:divide-slate-700/30">
+                <thead class="bg-gradient-to-r from-violet-500/5 to-indigo-500/5 dark:from-violet-500/10 dark:to-indigo-500/10">
                     <tr>
                         <th
                             v-for="column in columns"
                             :key="column.key"
                             scope="col"
-                            class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                            class="type-label px-4 py-3 text-left"
                             :class="column.className"
                         >
                             {{ column.label }}
                         </th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                <tbody class="divide-y divide-white/10 dark:divide-slate-700/20">
                     <tr v-if="loading">
                         <td :colspan="columns.length" class="px-4 py-10">
                             <div class="grid gap-2">
@@ -34,7 +34,7 @@
                         v-for="row in rows"
                         v-else
                         :key="String(row[rowKey])"
-                        class="transition hover:bg-slate-50/90 dark:hover:bg-slate-800/30"
+                        class="transition hover:bg-white/40 dark:hover:bg-slate-800/30"
                         @click="emit('rowClick', row)"
                     >
                         <td

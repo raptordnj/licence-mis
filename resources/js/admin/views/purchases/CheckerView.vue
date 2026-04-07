@@ -21,12 +21,12 @@
             </div>
 
             <div v-if="recentCodes.length > 0" class="mt-3 flex flex-wrap items-center gap-2">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Recent</p>
+                <p class="type-label">Recent</p>
                 <button
                     v-for="code in recentCodes"
                     :key="code"
                     type="button"
-                    class="rounded-full border border-slate-300 px-2.5 py-1 text-xs text-slate-600 transition hover:border-cyan-400 hover:text-cyan-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-cyan-400 dark:hover:text-cyan-200"
+                    class="rounded-full border border-white/30 bg-white/40 px-2.5 py-1 text-xs text-slate-600 backdrop-blur-sm transition hover:border-violet-400 hover:text-violet-700 dark:border-slate-700/50 dark:bg-slate-800/40 dark:text-slate-300 dark:hover:border-violet-400 dark:hover:text-violet-200"
                     @click="runRecentCheck(code)"
                 >
                     {{ code }}
@@ -45,27 +45,27 @@
         </UiCard>
 
         <template v-else-if="purchase !== null">
-            <div class="grid gap-4 xl:grid-cols-4">
-                <UiCard>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Purchase Status</p>
+            <div class="grid gap-4 grid-cols-2 xl:grid-cols-4">
+                <UiCard class="accent-strip">
+                    <p class="type-label">Purchase Status</p>
                     <div class="mt-2">
                         <StatusBadge :value="purchase.status" />
                     </div>
                 </UiCard>
-                <UiCard>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Buyer</p>
+                <UiCard class="accent-strip">
+                    <p class="type-label">Buyer</p>
                     <p class="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">{{ purchase.buyer }}</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">{{ purchase.buyer_email ?? 'No buyer email' }}</p>
                 </UiCard>
-                <UiCard>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Bound Domain</p>
+                <UiCard class="accent-strip">
+                    <p class="type-label">Bound Domain</p>
                     <p class="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">{{ license?.bound_domain ?? 'Unbound' }}</p>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         Last check: {{ formatDateTime(license?.last_check_at ?? null) }}
                     </p>
                 </UiCard>
-                <UiCard>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Support</p>
+                <UiCard class="accent-strip">
+                    <p class="type-label">Support</p>
                     <p class="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
                         {{ supportRelativeLabel }}
                     </p>
@@ -77,7 +77,7 @@
 
             <UiCard>
                 <div class="mb-3 flex items-center justify-between gap-2">
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Sale Snapshot</h2>
+                    <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Sale Snapshot</h2>
                     <UiButton variant="secondary" @click="copyPurchaseCode">Copy Purchase Code</UiButton>
                 </div>
                 <DataTable
@@ -97,29 +97,29 @@
 
             <div class="grid gap-4 lg:grid-cols-2">
                 <UiCard>
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Purchase Details</h2>
+                    <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Purchase Details</h2>
                     <dl class="mt-3 grid gap-2 sm:grid-cols-2">
                         <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Item</dt>
+                            <dt class="type-label">Item</dt>
                             <dd class="text-sm">{{ purchase.item_name }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Envato Item ID</dt>
+                            <dt class="type-label">Envato Item ID</dt>
                             <dd class="text-sm">{{ purchase.envato_item_id }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Purchase Date</dt>
+                            <dt class="type-label">Purchase Date</dt>
                             <dd class="text-sm">{{ formatDate(purchase.purchase_date) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Created</dt>
+                            <dt class="type-label">Created</dt>
                             <dd class="text-sm">{{ formatDateTime(purchase.created_at) }}</dd>
                         </div>
                     </dl>
                 </UiCard>
 
                 <UiCard>
-                    <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Smart Actions</h2>
+                    <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Smart Actions</h2>
                     <div class="mt-3 grid gap-2">
                         <UiButton variant="secondary" @click="openPurchaseDetail">Open Purchase Detail</UiButton>
                         <UiButton variant="secondary" :disabled="license === null" @click="openLicenseDetail">

@@ -93,6 +93,12 @@ class AdminFoundationEndpointsTest extends TestCase
         $itemsResponse->assertJsonPath('success', true);
         $itemsResponse->assertJsonPath('data.data.0.envato_item_id', 1001);
 
+        $itemDetailResponse = $this->getJson("/api/v1/admin/items/{$envatoItem->id}");
+        $itemDetailResponse->assertOk();
+        $itemDetailResponse->assertJsonPath('success', true);
+        $itemDetailResponse->assertJsonPath('data.id', $envatoItem->id);
+        $itemDetailResponse->assertJsonPath('data.name', $envatoItem->name);
+
         $createItemResponse = $this->postJson('/api/v1/admin/items', [
             'marketplace' => 'envato',
             'envato_item_id' => 2002,

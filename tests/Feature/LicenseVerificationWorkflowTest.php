@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\LicenseStatus;
 use App\Models\License;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -38,6 +39,29 @@ class LicenseVerificationWorkflowTest extends TestCase
         $this->assertDatabaseHas('licenses', [
             'purchase_code' => 'valid-first-bind',
             'bound_domain' => 'example.com',
+            'status' => LicenseStatus::ACTIVE->value,
+        ]);
+    }
+
+    public function test_it_resolves_item_scope_from_product_id_when_item_id_is_missing(): void
+    {
+        $product = Product::factory()->create([
+            'envato_item_id' => 1000,
+        ]);
+
+        $response = $this->postJson('/api/v1/licenses/verify', [
+            'purchase_code' => 'valid-product-id-only',
+            'domain' => 'product-id-only.example.com',
+            'product_id' => $product->id,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('licenses', [
+            'purchase_code' => 'valid-product-id-only',
+            'bound_domain' => 'product-id-only.example.com',
+            'envato_item_id' => 1000,
             'status' => LicenseStatus::ACTIVE->value,
         ]);
     }

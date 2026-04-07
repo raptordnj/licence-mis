@@ -56,11 +56,11 @@
         </DataTable>
 
         <div class="flex items-center justify-end gap-2">
-            <UiButton variant="secondary" :disabled="query.page <= 1" @click="query.page -= 1">Previous</UiButton>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-                Page {{ logsStore.response.current_page }} of {{ logsStore.response.last_page }}
-            </p>
-            <UiButton variant="secondary" :disabled="logsStore.response.current_page >= logsStore.response.last_page" @click="query.page += 1">
+            <UiButton size="compact" variant="secondary" :disabled="query.page <= 1" @click="query.page -= 1">Previous</UiButton>
+            <span class="pagination-glass text-xs text-slate-600 dark:text-slate-300">
+                {{ logsStore.response.current_page }} / {{ logsStore.response.last_page }}
+            </span>
+            <UiButton size="compact" variant="secondary" :disabled="logsStore.response.current_page >= logsStore.response.last_page" @click="query.page += 1">
                 Next
             </UiButton>
         </div>

@@ -295,6 +295,31 @@ export const useLicensesStore = defineStore('licensesStore', {
             }
         },
 
+        async resetActivations(id: number, reason: string): Promise<void> {
+            this.actionLoading = true;
+            this.error = null;
+
+            try {
+                await requestData(
+                    {
+                        method: 'POST',
+                        url: `/admin/licenses/${id}/reset-activations`,
+                        data: { reason },
+                    },
+                    backendLicenseSchema,
+                );
+            } catch (error: unknown) {
+                this.error = extractApiError(error);
+            } finally {
+                this.cache.clear();
+                await this.fetchLicenses();
+                if (this.detail?.id === id) {
+                    await this.fetchLicenseDetail(id);
+                }
+                this.actionLoading = false;
+            }
+        },
+
         async bulkRevoke(reason: string): Promise<void> {
             const ids = [...this.selectedIds];
 

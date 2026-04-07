@@ -14,9 +14,12 @@ readonly class EnvatoVerifierService implements EnvatoVerifierInterface
     {
     }
 
-    public function verifyPurchaseCode(string $purchaseCode): EnvatoVerificationData
-    {
-        $validation = $this->purchaseValidator->validate($purchaseCode, null, null);
+    public function verifyPurchaseCode(
+        string $purchaseCode,
+        ?int $envatoItemId = null,
+        ?int $productId = null,
+    ): EnvatoVerificationData {
+        $validation = $this->purchaseValidator->validate($purchaseCode, $envatoItemId, $productId);
 
         return new EnvatoVerificationData(
             valid: $validation->valid,

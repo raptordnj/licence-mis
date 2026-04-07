@@ -13,36 +13,36 @@
 
         <ErrorBanner v-if="purchasesStore.detailError !== null" :message="purchasesStore.detailError.message" />
 
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Buyer</p>
-                <p class="mt-2 text-sm font-medium">{{ purchase?.buyer_username ?? purchase?.buyer ?? 'N/A' }}</p>
+        <div class="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+            <UiCard class="accent-strip">
+                <p class="type-label">Buyer</p>
+                <p class="mt-2 text-sm font-semibold">{{ purchase?.buyer_username ?? purchase?.buyer ?? 'N/A' }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Item</p>
-                <p class="mt-2 text-sm font-medium">{{ purchase?.item_name ?? 'N/A' }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Item</p>
+                <p class="mt-2 text-sm font-semibold">{{ purchase?.item_name ?? 'N/A' }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Envato Item ID</p>
-                <p class="mt-2 text-sm font-medium">{{ purchase?.envato_item_id ?? 'N/A' }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Envato Item ID</p>
+                <p class="mt-2 text-sm font-semibold">{{ purchase?.envato_item_id ?? 'N/A' }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Purchase Date</p>
-                <p class="mt-2 text-sm font-medium">{{ formatDate(purchase?.purchase_date ?? null) }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Purchase Date</p>
+                <p class="mt-2 text-sm font-semibold">{{ formatDate(purchase?.purchase_date ?? null) }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Supported Until</p>
-                <p class="mt-2 text-sm font-medium">{{ formatDate(purchase?.supported_until ?? null) }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Supported Until</p>
+                <p class="mt-2 text-sm font-semibold">{{ formatDate(purchase?.supported_until ?? null) }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Activated At</p>
-                <p class="mt-2 text-sm font-medium">{{ formatDateTime(purchase?.activated_at ?? null) }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Activated At</p>
+                <p class="mt-2 text-sm font-semibold">{{ formatDateTime(purchase?.activated_at ?? null) }}</p>
             </UiCard>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
             <UiCard class="lg:col-span-2 space-y-3">
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Linked License</h2>
+                <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Linked License</h2>
 
                 <div v-if="license !== null" class="grid gap-2 text-sm sm:grid-cols-2">
                     <p><span class="text-slate-500 dark:text-slate-400">License ID:</span> {{ license.id }}</p>
@@ -57,7 +57,7 @@
             </UiCard>
 
             <UiCard class="space-y-2">
-                <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Actions</h2>
+                <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">Actions</h2>
                 <UiButton
                     v-if="license !== null"
                     variant="secondary"

@@ -8,5 +8,9 @@ use App\Data\Domain\EnvatoVerificationData;
 
 interface EnvatoVerifierInterface
 {
-    public function verifyPurchaseCode(string $purchaseCode): EnvatoVerificationData;
+    public function verifyPurchaseCode(
+        string $purchaseCode,
+        ?int $envatoItemId = null,
+        ?int $productId = null,
+    ): EnvatoVerificationData;
 }

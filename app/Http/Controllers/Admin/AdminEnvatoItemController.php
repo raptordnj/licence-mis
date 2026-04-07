@@ -25,6 +25,15 @@ class AdminEnvatoItemController extends Controller
         return ApiResponse::success($items->toArray());
     }
 
+    public function show(EnvatoItem $envatoItem): JsonResponse
+    {
+        $this->authorize('view', $envatoItem);
+
+        $envatoItem->loadCount('licenses');
+
+        return ApiResponse::success($envatoItem->toArray());
+    }
+
     public function store(StoreEnvatoItemRequest $request): JsonResponse
     {
         $this->authorize('create', EnvatoItem::class);

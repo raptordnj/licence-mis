@@ -1,9 +1,9 @@
 <template>
-    <div class="grid min-h-dvh place-items-center bg-slate-100 px-4 py-10 dark:bg-slate-950">
+    <div class="gradient-mesh grid min-h-dvh place-items-center bg-slate-100 px-4 py-10 dark:bg-slate-950">
         <UiCard class="w-full max-w-md">
-            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-600 dark:text-cyan-400">Envato License MIS</p>
-            <h1 class="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">Admin Login</h1>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p class="font-display text-xs font-semibold uppercase tracking-[0.14em] gradient-text">Envato License MIS</p>
+            <h1 class="mt-2 font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Admin Login</h1>
+            <p class="mt-1 text-sm leading-relaxed text-pretty text-slate-500 dark:text-slate-400">
                 Sign in to manage licenses, monitor validation logs, and review audit activity.
             </p>
 
@@ -15,7 +15,7 @@
                     <input
                         v-model="form.rememberMe"
                         type="checkbox"
-                        class="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900"
+                        class="h-4 w-4 rounded border-slate-300 text-violet-500 focus:ring-violet-400 dark:border-slate-700 dark:bg-slate-900"
                     />
                     Remember me
                 </label>

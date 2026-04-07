@@ -1,6 +1,6 @@
 <template>
     <section
-        class="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/80"
+        class="glass rounded-2xl p-4 shadow-sm transition-shadow hover:shadow-md hover:shadow-violet-500/5 dark:hover:shadow-violet-500/10"
     >
         <slot />
     </section>

@@ -218,6 +218,29 @@ class LicenseAdminController extends Controller
         return ApiResponse::success($updated->toArray());
     }
 
+    public function resetActivations(
+        ResetLicenseDomainRequest $request,
+        License $license,
+        ResetLicenseDomainAction $action,
+    ): JsonResponse {
+        $this->authorize('resetDomain', $license);
+
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
+        $reason = trim($request->string('reason')->toString());
+        $normalizedReason = $reason !== ''
+            ? $reason
+            : 'Activation reset requested by admin.';
+
+        $updated = $action->execute($license, $user, $normalizedReason);
+
+        return ApiResponse::success($updated->toArray());
+    }
+
     /**
      * @param  array<string, mixed>  $metadata
      */

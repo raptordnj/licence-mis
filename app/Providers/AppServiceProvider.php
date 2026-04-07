@@ -106,5 +106,26 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute((int) config('license_manager.deactivate_rate_limit_per_minute', 30))
                 ->by("deactivate|{$ipAddress}|{$purchaseCode}");
         });
+
+        RateLimiter::for('public-update-manifest', function (Request $request): Limit {
+            $channel = mb_strtolower(trim((string) $request->input('channel', 'stable')));
+            $productId = mb_strtolower(trim((string) $request->input('product_id', 'global')));
+            $ipAddress = (string) $request->ip();
+
+            return Limit::perMinute((int) config('update_releases.manifest_rate_limit_per_minute', 120))
+                ->by("update_manifest|{$ipAddress}|{$channel}|{$productId}");
+        });
+
+        RateLimiter::for('public-update-download', function (Request $request): Limit {
+            $releaseRouteParam = $request->route('updateRelease');
+            $releaseId = is_object($releaseRouteParam) && isset($releaseRouteParam->id)
+                ? (string) $releaseRouteParam->id
+                : (is_scalar($releaseRouteParam) ? (string) $releaseRouteParam : 'unknown');
+            $releaseId = mb_strtolower(trim($releaseId));
+            $ipAddress = (string) $request->ip();
+
+            return Limit::perMinute((int) config('update_releases.download_rate_limit_per_minute', 120))
+                ->by("update_download|{$ipAddress}|{$releaseId}");
+        });
     }
 }

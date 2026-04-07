@@ -108,6 +108,69 @@ Response:
 }
 ```
 
+## Public Update Release API
+
+### `GET /api/updates/manifest`
+Returns the latest published release manifest for a channel.
+
+Query params:
+- `channel` (optional, default: `stable`)
+- `current_version` (optional, semantic version string)
+- `product_id` (optional)
+- `envato_item_id` (optional)
+
+Response envelope:
+```json
+{
+  "success": true,
+  "data": {
+    "channel": "stable",
+    "version": "1.2.0",
+    "download_url": "https://licence-mis.local/api/updates/releases/7/download",
+    "checksum": "a2d2d6...",
+    "min_version": "1.0.0",
+    "max_version": "2.0.0",
+    "release_notes": "Bug fixes and security improvements.",
+    "published_at": "2026-03-07T10:00:00+00:00",
+    "is_available": true,
+    "compatible": true
+  },
+  "error": null
+}
+```
+
+### `GET /api/updates/releases/{updateRelease}/download`
+Downloads the ZIP package for a published release.
+
+Notes:
+- Returns a binary file response.
+- Returns `404` envelope when release is unpublished or file is missing.
+
+## Admin Update Release Endpoints
+Auth: `auth:sanctum` + admin role
+
+### `GET /api/v1/admin/update-releases`
+Query params: `product_id`, `channel`, `is_published`, `per_page`, `page`
+
+### `POST /api/v1/admin/update-releases`
+Multipart payload:
+- `package` (required `.zip`)
+- `product_id` (optional, null for global release)
+- `channel` (required)
+- `version` (required)
+- `min_version` (optional)
+- `max_version` (optional)
+- `release_notes` (optional)
+- `is_published` (optional)
+- `published_at` (optional)
+- `metadata` (optional object)
+
+### `PUT /api/v1/admin/update-releases/{updateRelease}`
+Multipart/JSON payload, same keys as create but all optional.
+
+### `DELETE /api/v1/admin/update-releases/{updateRelease}`
+Deletes release record and stored package file.
+
 ### Key Management
 Generate RSA keys:
 ```bash
@@ -177,6 +240,15 @@ Request:
 ```
 
 ### `POST /admin/licenses/{license}/reset-domain`
+Request:
+```json
+{
+  "reason": "string|null"
+}
+```
+
+### `POST /admin/licenses/{license}/reset-activations`
+Use this when a license gets stuck on `limit_reached` or old instance bindings.
 Request:
 ```json
 {

@@ -2,7 +2,7 @@
     <button
         :type="type"
         :disabled="disabled || loading"
-        class="inline-flex items-center justify-center gap-2 border font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 disabled:cursor-not-allowed disabled:opacity-60"
+        class="inline-flex items-center justify-center gap-2 border font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.97]"
         :class="[sizeClass, variantClass]"
     >
         <span
@@ -51,17 +51,17 @@ const spinnerClass = computed<string>(() => {
 
 const variantClass = computed<string>(() => {
     if (props.variant === 'secondary') {
-        return 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800';
+        return 'border-white/20 bg-white/60 text-slate-800 backdrop-blur hover:bg-white/80 dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800/80';
     }
 
     if (props.variant === 'danger') {
-        return 'border-rose-300 bg-rose-500 text-white hover:bg-rose-600 dark:border-rose-400/60 dark:bg-rose-500 dark:hover:bg-rose-600';
+        return 'border-rose-400/50 bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-sm hover:shadow-rose-500/25 hover:shadow-lg dark:border-rose-400/30 dark:from-rose-500 dark:to-rose-600';
     }
 
     if (props.variant === 'ghost') {
-        return 'border-transparent bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800';
+        return 'border-transparent bg-transparent text-slate-600 hover:bg-white/60 hover:backdrop-blur dark:text-slate-300 dark:hover:bg-slate-800/60';
     }
 
-    return 'border-cyan-500 bg-cyan-500 text-slate-950 hover:bg-cyan-400 dark:border-cyan-400 dark:bg-cyan-400 dark:hover:bg-cyan-300';
+    return 'border-violet-400/50 bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-sm hover:shadow-violet-500/25 hover:shadow-lg dark:border-violet-400/30 dark:from-violet-500 dark:to-indigo-500';
 });
 </script>

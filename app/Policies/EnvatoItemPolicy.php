@@ -15,6 +15,11 @@ class EnvatoItemPolicy
         return $user->isAdmin() || $user->role === RoleName::SUPPORT;
     }
 
+    public function view(User $user, EnvatoItem $envatoItem): bool
+    {
+        return $user->isAdmin() || $user->role === RoleName::SUPPORT;
+    }
+
     public function create(User $user): bool
     {
         return $user->isAdmin();

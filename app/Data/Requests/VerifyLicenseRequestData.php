@@ -12,6 +12,7 @@ class VerifyLicenseRequestData extends Data
         public string $purchaseCode,
         public string $domain,
         public ?int $itemId,
+        public ?int $productId,
     ) {
     }
 }

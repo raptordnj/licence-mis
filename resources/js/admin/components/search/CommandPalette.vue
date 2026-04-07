@@ -1,55 +1,57 @@
 <template>
     <Teleport to="body">
-        <div
-            v-if="open"
-            class="fixed inset-0 z-[70] bg-slate-950/55 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Global search"
-            @click.self="close"
-        >
-            <div class="mx-auto mt-[8vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-                <div class="border-b border-slate-200 p-3 dark:border-slate-800">
-                    <input
-                        ref="searchInput"
-                        v-model.trim="search"
-                        type="text"
-                        placeholder="Search purchase code, domain, license, item..."
-                        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                    />
-                </div>
+        <Transition name="palette">
+            <div
+                v-if="open"
+                class="fixed inset-0 z-[70] bg-slate-950/40 p-4 backdrop-blur-sm"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Global search"
+                @click.self="close"
+            >
+                <div class="mx-auto mt-[8vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-white/20 bg-white/80 shadow-2xl shadow-violet-500/10 backdrop-blur-xl dark:border-slate-700/30 dark:bg-slate-900/80">
+                    <div class="border-b border-white/10 p-3 dark:border-slate-700/20">
+                        <input
+                            ref="searchInput"
+                            v-model.trim="search"
+                            type="text"
+                            placeholder="Search purchase code, domain, license, item..."
+                            class="w-full rounded-xl border border-white/30 bg-white/50 px-3 py-2 text-sm text-slate-800 shadow-sm backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:shadow-violet-500/10 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-slate-100"
+                        />
+                    </div>
 
-                <div class="max-h-[60vh] overflow-y-auto p-3">
-                    <p v-if="loading" class="text-sm text-slate-500 dark:text-slate-400">Searching...</p>
-                    <p v-else-if="flatResults.length === 0" class="text-sm text-slate-500 dark:text-slate-400">
-                        No matches found.
-                    </p>
+                    <div class="max-h-[60vh] overflow-y-auto p-3">
+                        <p v-if="loading" class="text-sm text-slate-500 dark:text-slate-400">Searching...</p>
+                        <p v-else-if="flatResults.length === 0" class="text-sm text-slate-500 dark:text-slate-400">
+                            No matches found.
+                        </p>
 
-                    <template v-for="group in groupedResults" :key="group.label">
-                        <section v-if="group.items.length > 0" class="mb-4">
-                            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                {{ group.label }}
-                            </p>
-                            <button
-                                v-for="item in group.items"
-                                :key="`${group.label}-${item.to}`"
-                                type="button"
-                                class="mb-1 w-full rounded-lg px-3 py-2 text-left transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 dark:hover:bg-slate-800"
-                                :class="
-                                    flatResults[activeIndex]?.to === item.to
-                                        ? 'bg-slate-100 dark:bg-slate-800'
-                                        : 'bg-transparent'
-                                "
-                                @click="select(item.to)"
-                            >
-                                <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ item.title }}</p>
-                                <p class="text-xs text-slate-500 dark:text-slate-400">{{ item.subtitle }}</p>
-                            </button>
-                        </section>
-                    </template>
+                        <template v-for="group in groupedResults" :key="group.label">
+                            <section v-if="group.items.length > 0" class="mb-4">
+                                <p class="type-label mb-2 gradient-text">
+                                    {{ group.label }}
+                                </p>
+                                <button
+                                    v-for="item in group.items"
+                                    :key="`${group.label}-${item.to}`"
+                                    type="button"
+                                    class="mb-1 w-full rounded-lg px-3 py-2 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
+                                    :class="
+                                        flatResults[activeIndex]?.to === item.to
+                                            ? 'bg-gradient-to-r from-violet-500/10 to-indigo-500/10 shadow-sm dark:from-violet-500/20 dark:to-indigo-500/20'
+                                            : 'hover:bg-white/60 dark:hover:bg-slate-800/60'
+                                    "
+                                    @click="select(item.to)"
+                                >
+                                    <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ item.title }}</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ item.subtitle }}</p>
+                                </button>
+                            </section>
+                        </template>
+                    </div>
                 </div>
             </div>
-        </div>
+        </Transition>
     </Teleport>
 </template>
 
@@ -167,3 +169,26 @@ onUnmounted(() => {
     window.removeEventListener('keydown', onKeyDown);
 });
 </script>
+
+<style scoped>
+.palette-enter-active,
+.palette-leave-active {
+    transition: all 200ms ease;
+}
+
+.palette-enter-active > div:last-child,
+.palette-leave-active > div:last-child {
+    transition: all 200ms ease;
+}
+
+.palette-enter-from,
+.palette-leave-to {
+    opacity: 0;
+}
+
+.palette-enter-from > div:last-child,
+.palette-leave-to > div:last-child {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+}
+</style>

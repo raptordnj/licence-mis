@@ -1,12 +1,12 @@
 <template>
     <label class="grid gap-1.5">
-        <span v-if="label !== ''" class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <span v-if="label !== ''" class="type-label">
             {{ label }}
         </span>
         <select
             :model-value="modelValue"
             :disabled="disabled"
-            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            class="w-full rounded-xl border border-white/30 bg-white/50 px-3 py-2 text-sm text-slate-800 shadow-sm backdrop-blur transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:shadow-violet-500/10 focus-visible:shadow-md disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-slate-100"
             @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
         >
             <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>

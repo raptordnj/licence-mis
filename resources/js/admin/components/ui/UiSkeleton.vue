@@ -1,5 +1,5 @@
 <template>
-    <span class="block animate-pulse rounded-md bg-slate-200/80 dark:bg-slate-800/80" :style="style"></span>
+    <span class="block rounded-md shimmer" :style="style"></span>
 </template>
 
 <script setup lang="ts">

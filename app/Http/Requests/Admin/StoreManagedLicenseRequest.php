@@ -22,7 +22,7 @@ class StoreManagedLicenseRequest extends FormRequest
     {
         return [
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'purchase_code' => ['required', 'string', 'max:120', 'unique:licenses,purchase_code'],
+            'purchase_code' => ['required', 'string', 'max:255', 'unique:licenses,purchase_code'],
             'buyer' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', Rule::in([
                 LicenseStatus::VALID->value,

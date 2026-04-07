@@ -11,22 +11,24 @@ use App\Enums\Marketplace;
 use App\Models\License;
 use App\Models\LicenseInstance;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 
 readonly class LicenseManagerLicenseRepository
 {
     public function findByPurchaseCodeAndProduct(string $purchaseCode, int $productId): ?License
     {
-        return License::query()
-            ->where('purchase_code', $purchaseCode)
-            ->where('product_id', $productId)
-            ->first();
+        $query = License::query()
+            ->where('product_id', $productId);
+
+        return $this->findByPurchaseCodeUsingQuery(
+            query: $query,
+            purchaseCode: $purchaseCode,
+        );
     }
 
     public function findByPurchaseCode(string $purchaseCode): ?License
     {
-        return License::query()
-            ->where('purchase_code', $purchaseCode)
-            ->first();
+        return $this->findByPurchaseCodeUsingQuery(License::query(), $purchaseCode);
     }
 
     public function findByActiveDomainAndProduct(string $domain, int $productId): ?License
@@ -80,15 +82,36 @@ readonly class LicenseManagerLicenseRepository
         Product $product,
         ValidationResultDTO $validationResult,
     ): License {
+        return $this->refreshFromValidation($license, $product, $validationResult);
+    }
+
+    public function attachProduct(License $license, Product $product): License
+    {
+        $license->forceFill([
+            'product_id' => $product->id,
+            'marketplace' => $license->marketplace ?? Marketplace::ENVATO,
+            'envato_item_id' => $license->envato_item_id ?? $product->envato_item_id,
+            'verified_at' => $license->verified_at ?? now(),
+        ])->save();
+
+        return $license->refresh();
+    }
+
+    public function refreshFromValidation(
+        License $license,
+        Product $product,
+        ValidationResultDTO $validationResult,
+    ): License {
         /** @var array<string, mixed> $metadata */
         $metadata = is_array($license->metadata) ? $license->metadata : [];
 
         $license->forceFill([
             'product_id' => $product->id,
-            'buyer' => $license->buyer ?? $validationResult->buyer,
+            'buyer' => $validationResult->buyer ?? $license->buyer,
             'marketplace' => $license->marketplace ?? Marketplace::ENVATO,
-            'envato_item_id' => $license->envato_item_id ?? $validationResult->envatoItemId ?? $product->envato_item_id,
-            'supported_until' => $license->supported_until ?? $validationResult->supportedUntil,
+            'envato_item_id' => $validationResult->envatoItemId ?? $license->envato_item_id ?? $product->envato_item_id,
+            'status' => LicenseStatus::VALID,
+            'supported_until' => $validationResult->supportedUntil ?? $license->supported_until,
             'verified_at' => now(),
             'metadata' => $this->buildValidationMetadata($metadata, $validationResult),
         ])->save();
@@ -109,6 +132,7 @@ readonly class LicenseManagerLicenseRepository
             'buyer_username' => $metadata['buyer_username'] ?? $validationResult->buyer,
             'license_type' => $metadata['license_type'] ?? 'regular',
             'version' => $metadata['version'] ?? null,
+            'raw_payload' => $validationResult->rawPayload,
             'mock' => [
                 'source' => $validationResult->source,
                 'matched_by' => $validationResult->matchedBy,
@@ -138,5 +162,63 @@ readonly class LicenseManagerLicenseRepository
             ->where('status', LicenseInstanceStatus::ACTIVE->value)
             ->orderBy('activated_at')
             ->value('domain');
+    }
+
+    private function findByPurchaseCodeUsingQuery(Builder $query, string $purchaseCode): ?License
+    {
+        $normalized = mb_strtolower(trim($purchaseCode));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        $exactMatch = (clone $query)
+            ->whereRaw('LOWER(purchase_code) = ?', [$normalized])
+            ->first();
+
+        if ($exactMatch instanceof License) {
+            return $exactMatch;
+        }
+
+        if (! $this->looksLikeSha512Hash($normalized)) {
+            return null;
+        }
+
+        $matchedLicenseId = null;
+
+        (clone $query)
+            ->select(['id', 'purchase_code'])
+            ->orderBy('id')
+            ->chunkById(200, function ($licenses) use (&$matchedLicenseId, $normalized): bool {
+                foreach ($licenses as $license) {
+                    $storedCode = trim((string) $license->purchase_code);
+                    if ($storedCode === '') {
+                        continue;
+                    }
+
+                    $storedCodeHash = $this->looksLikeSha512Hash($storedCode)
+                        ? mb_strtolower($storedCode)
+                        : hash('sha512', $storedCode);
+
+                    if (hash_equals($normalized, $storedCodeHash)) {
+                        $matchedLicenseId = $license->id;
+
+                        return false;
+                    }
+                }
+
+                return true;
+            }, 'id');
+
+        if (! is_int($matchedLicenseId)) {
+            return null;
+        }
+
+        return License::query()->find($matchedLicenseId);
+    }
+
+    private function looksLikeSha512Hash(string $value): bool
+    {
+        return preg_match('/\A[a-f0-9]{128}\z/i', $value) === 1;
     }
 }

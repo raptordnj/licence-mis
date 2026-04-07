@@ -3,31 +3,37 @@
         <PageHeader
             :title="item?.name ?? `Item #${route.params.id}`"
             eyebrow="Envato Item Detail"
-            description="Review item-level license and purchase activity."
+            description="Review item-level license, purchase activity, and update releases."
         >
             <template #actions>
                 <UiButton variant="secondary" @click="router.push('/admin/items')">Back to Items</UiButton>
             </template>
         </PageHeader>
 
-        <UiCard v-if="item !== null" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Marketplace</p>
-                <p class="mt-1 text-sm font-medium">{{ item.marketplace }}</p>
-            </div>
-            <div>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Envato Item ID</p>
-                <p class="mt-1 text-sm font-medium">{{ item.envato_item_id }}</p>
-            </div>
-            <div>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Licenses</p>
-                <p class="mt-1 text-sm font-medium">{{ item.licenses_count }}</p>
-            </div>
-            <div>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</p>
-                <StatusBadge :value="item.status" />
-            </div>
+        <ErrorBanner v-if="itemError !== null" :message="itemError.message" />
+
+        <UiCard v-if="itemLoading" class="p-4">
+            <p class="text-sm text-slate-500 dark:text-slate-300">Loading item details...</p>
         </UiCard>
+
+        <div v-if="item !== null" class="grid gap-3 grid-cols-2 xl:grid-cols-4">
+            <UiCard class="accent-strip">
+                <p class="type-label">Marketplace</p>
+                <p class="mt-2 text-sm font-semibold">{{ item.marketplace }}</p>
+            </UiCard>
+            <UiCard class="accent-strip">
+                <p class="type-label">Envato Item ID</p>
+                <p class="mt-2 text-sm font-semibold">{{ item.envato_item_id }}</p>
+            </UiCard>
+            <UiCard class="accent-strip">
+                <p class="type-label">Licenses</p>
+                <p class="mt-2 text-sm font-semibold">{{ item.licenses_count }}</p>
+            </UiCard>
+            <UiCard class="accent-strip">
+                <p class="type-label">Status</p>
+                <StatusBadge :value="item.status" />
+            </UiCard>
+        </div>
 
         <UiTabs v-model="activeTab" :tabs="tabs" />
 
@@ -51,7 +57,11 @@
             />
         </UiCard>
 
-        <UiCard v-else>
+        <UiCard v-else-if="activeTab === 'releases' && item !== null">
+            <ItemReleaseManager :item="item" :can-manage="canManage" />
+        </UiCard>
+
+        <UiCard v-else-if="activeTab === 'settings'">
             <p class="text-sm text-slate-600 dark:text-slate-300">
                 Item-level policies can be managed here when backend policies are enabled.
             </p>
@@ -60,28 +70,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import DataTable, { type DataTableColumn } from '@/admin/components/data/DataTable.vue';
+import ErrorBanner from '@/admin/components/feedback/ErrorBanner.vue';
 import StatusBadge from '@/admin/components/feedback/StatusBadge.vue';
 import PageHeader from '@/admin/components/layout/PageHeader.vue';
 import UiButton from '@/admin/components/ui/UiButton.vue';
 import UiCard from '@/admin/components/ui/UiCard.vue';
 import UiTabs from '@/admin/components/ui/UiTabs.vue';
-import { demoLicenses, demoItems, demoPurchases } from '@/admin/services/demoData';
+import { usePermissions } from '@/admin/composables/usePermissions';
+import { envatoItemSchema } from '@/admin/schemas/api';
+import { demoLicenses, demoPurchases } from '@/admin/services/demoData';
+import { extractApiError, requestData } from '@/admin/services/http';
+import type { ApiError, EnvatoItem } from '@/admin/types/api';
 import { formatDate } from '@/admin/utils/format';
+import ItemReleaseManager from '@/admin/views/items/components/ItemReleaseManager.vue';
 
 const route = useRoute();
 const router = useRouter();
+const { can } = usePermissions();
 
 const itemId = computed<number>(() => Number(route.params.id));
-const item = computed(() => demoItems.find((entry) => entry.id === itemId.value) ?? null);
-const activeTab = ref<'licenses' | 'purchases' | 'settings'>('licenses');
+const canManage = computed<boolean>(() => can('items:manage'));
+const item = ref<EnvatoItem | null>(null);
+const itemLoading = ref(false);
+const itemError = ref<ApiError | null>(null);
+const activeTab = ref<'licenses' | 'purchases' | 'releases' | 'settings'>('licenses');
 
 const tabs = [
     { label: 'Licenses for Item', value: 'licenses' },
     { label: 'Purchases for Item', value: 'purchases' },
+    { label: 'Release Management', value: 'releases' },
     { label: 'Settings', value: 'settings' },
 ];
 
@@ -119,5 +140,44 @@ const purchaseRows = computed(() =>
             status: entry.status,
             purchase_date: formatDate(entry.purchase_date),
         })),
+);
+
+const loadItem = async (): Promise<void> => {
+    if (!Number.isFinite(itemId.value) || itemId.value < 1) {
+        item.value = null;
+        itemError.value = {
+            code: 'NOT_FOUND',
+            message: 'Invalid item id.',
+        };
+        return;
+    }
+
+    itemLoading.value = true;
+    itemError.value = null;
+
+    try {
+        const payload = await requestData(
+            {
+                method: 'GET',
+                url: `/admin/items/${itemId.value}`,
+            },
+            envatoItemSchema,
+        );
+
+        item.value = payload;
+    } catch (error: unknown) {
+        itemError.value = extractApiError(error);
+        item.value = null;
+    } finally {
+        itemLoading.value = false;
+    }
+};
+
+watch(
+    () => itemId.value,
+    () => {
+        void loadItem();
+    },
+    { immediate: true },
 );
 </script>

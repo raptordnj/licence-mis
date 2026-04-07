@@ -40,6 +40,23 @@
 
 `POST /api/licenses/deactivate` follows the same layered flow through `DeactivatePublicLicenseAction` and marks matching `license_instances` rows inactive.
 
+## Public Update Release Flow
+1. `GET /api/updates/manifest` hits `PublicUpdateReleaseController@manifest`.
+2. `UpdateReleaseService` resolves target product by `product_id` / `envato_item_id` (with configurable default fallback).
+3. Service selects latest published release for the requested channel:
+   - product-specific release first
+   - then global release (`product_id = null`) fallback
+4. Manifest response returns compatibility metadata (`min_version`, `max_version`) plus `download_url` and `checksum`.
+5. `GET /api/updates/releases/{id}/download` streams the ZIP package only if release is published and file exists.
+
+## Admin Update Release Flow
+1. `POST /api/v1/admin/update-releases` (multipart) uploads a ZIP package.
+2. `UpdateReleaseService` stores the package on configured disk and computes SHA-256 checksum.
+3. `update_releases` record stores channel, version, compatibility range, notes, publish state, package path, checksum, and size.
+4. `PUT /api/v1/admin/update-releases/{id}` can replace package and metadata.
+5. `DELETE /api/v1/admin/update-releases/{id}` removes both DB row and package file.
+6. Create/update/delete actions are written to audit log events.
+
 ## License Management Data Model
 - `products`
   - `id`, `envato_item_id`, `name`, `activation_limit`, `status`, `strict_domain_binding`

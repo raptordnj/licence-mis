@@ -13,31 +13,31 @@
 
         <ErrorBanner v-if="licensesStore.detailError !== null" :message="licensesStore.detailError.message" />
 
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Bound Domain</p>
-                <p class="mt-2 text-sm font-medium">{{ license?.bound_domain ?? 'Unbound' }}</p>
+        <div class="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+            <UiCard class="accent-strip">
+                <p class="type-label">Bound Domain</p>
+                <p class="mt-2 text-sm font-semibold">{{ license?.bound_domain ?? 'Unbound' }}</p>
                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ license?.bound_domain_original ?? 'N/A' }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Bound At</p>
-                <p class="mt-2 text-sm font-medium">{{ formatDateTime(license?.bound_at ?? null) }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Bound At</p>
+                <p class="mt-2 text-sm font-semibold">{{ formatDateTime(license?.bound_at ?? null) }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Instance Count</p>
-                <p class="mt-2 text-sm font-medium">{{ license?.instances.length ?? 0 }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Instance Count</p>
+                <p class="mt-2 text-sm font-semibold">{{ license?.instances.length ?? 0 }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Reset Count</p>
-                <p class="mt-2 text-sm font-medium">{{ license?.reset_count ?? 0 }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Reset Count</p>
+                <p class="mt-2 text-sm font-semibold">{{ license?.reset_count ?? 0 }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Last Checked</p>
-                <p class="mt-2 text-sm font-medium">{{ formatDateTime(license?.last_check_at ?? null) }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Last Checked</p>
+                <p class="mt-2 text-sm font-semibold">{{ formatDateTime(license?.last_check_at ?? null) }}</p>
             </UiCard>
-            <UiCard>
-                <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Revocation Info</p>
-                <p class="mt-2 text-sm font-medium">{{ revocationInfo }}</p>
+            <UiCard class="accent-strip">
+                <p class="type-label">Revocation Info</p>
+                <p class="mt-2 text-sm font-semibold">{{ revocationInfo }}</p>
             </UiCard>
         </div>
 
@@ -45,6 +45,7 @@
             <div class="flex flex-wrap gap-2">
                 <UiButton v-if="canRevoke" variant="danger" @click="openAction('revoke')">Revoke License</UiButton>
                 <UiButton v-if="canResetDomain" variant="secondary" @click="openAction('reset')">Reset Domain</UiButton>
+                <UiButton v-if="canResetDomain" variant="secondary" @click="openAction('reset_activations')">Reset Activations</UiButton>
                 <UiButton v-if="canRevoke" @click="openAction('reactivate')">Reactivate</UiButton>
             </div>
         </UiCard>
@@ -123,7 +124,7 @@ import { useLicensesStore } from '@/admin/stores/licenses';
 import { useToastStore } from '@/admin/stores/toast';
 import { formatDateTime } from '@/admin/utils/format';
 
-type ActionKind = 'revoke' | 'reset' | 'reactivate' | null;
+type ActionKind = 'revoke' | 'reset' | 'reset_activations' | 'reactivate' | null;
 
 const route = useRoute();
 const router = useRouter();
@@ -219,14 +220,24 @@ const modalTitle = computed(() => {
         return 'Reset bound domain?';
     }
 
+    if (action.value === 'reset_activations') {
+        return 'Reset active instances?';
+    }
+
     return 'Reactivate this license?';
 });
 
-const modalDescription = computed(() =>
-    action.value === 'reactivate'
-        ? 'Reactivation is available only if business rules permit.'
-        : 'This operation will be written to audit logs.',
-);
+const modalDescription = computed(() => {
+    if (action.value === 'reactivate') {
+        return 'Reactivation is available only if business rules permit.';
+    }
+
+    if (action.value === 'reset_activations') {
+        return 'This clears active instances to resolve activation-limit lockouts.';
+    }
+
+    return 'This operation will be written to audit logs.';
+});
 
 const openAction = (value: ActionKind): void => {
     action.value = value;
@@ -243,6 +254,8 @@ const confirmAction = async (): Promise<void> => {
         await licensesStore.revokeLicense(license.value.id, reason.value);
     } else if (action.value === 'reset') {
         await licensesStore.resetDomain(license.value.id, reason.value);
+    } else if (action.value === 'reset_activations') {
+        await licensesStore.resetActivations(license.value.id, reason.value);
     } else {
         toastStore.push({
             tone: 'info',

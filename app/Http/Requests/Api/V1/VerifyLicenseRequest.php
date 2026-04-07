@@ -19,9 +19,10 @@ class VerifyLicenseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'purchase_code' => ['required', 'string', 'max:120'],
+            'purchase_code' => ['required', 'string', 'max:255'],
             'domain' => ['required', 'string', 'max:255'],
-            'item_id' => ['nullable', 'integer', 'min:1'],
+            'item_id' => ['nullable', 'integer', 'min:1', 'required_without:product_id'],
+            'product_id' => ['nullable', 'integer', 'min:1', 'required_without:item_id'],
         ];
     }
 }

@@ -8,10 +8,17 @@ use App\Models\Product;
 
 readonly class LicenseManagerProductRepository
 {
+    public function findById(int $productId): ?Product
+    {
+        return Product::query()
+            ->where('id', $productId)
+            ->first();
+    }
+
     public function findByIdentifier(?int $productId, ?int $envatoItemId): ?Product
     {
         if ($productId !== null) {
-            $product = Product::query()->where('id', $productId)->first();
+            $product = $this->findById($productId);
 
             if ($product instanceof Product) {
                 if ($envatoItemId === null || $product->envato_item_id === $envatoItemId) {

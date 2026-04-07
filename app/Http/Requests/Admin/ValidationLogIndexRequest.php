@@ -23,7 +23,7 @@ class ValidationLogIndexRequest extends FormRequest
             'result' => ['nullable', Rule::in(['success', 'fail'])],
             'fail_reason' => ['nullable', 'string', 'max:120'],
             'item' => ['nullable', 'string', 'max:120'],
-            'purchase_code' => ['nullable', 'string', 'max:120'],
+            'purchase_code' => ['nullable', 'string', 'max:255'],
             'domain' => ['nullable', 'string', 'max:253'],
             'ip' => ['nullable', 'string', 'max:64'],
             'from' => ['nullable', 'date'],

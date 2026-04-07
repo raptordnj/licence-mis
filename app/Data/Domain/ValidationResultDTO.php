@@ -11,6 +11,7 @@ class ValidationResultDTO extends Data
 {
     /**
      * @param  array<int, string>  $domainRestrictions
+     * @param  array<string, mixed>|null  $rawPayload
      */
     public function __construct(
         public bool $valid,
@@ -23,11 +24,13 @@ class ValidationResultDTO extends Data
         public array $domainRestrictions,
         public string $source,
         public string $matchedBy,
+        public ?array $rawPayload,
     ) {
     }
 
     /**
      * @param  array<int, string>  $domainRestrictions
+     * @param  array<string, mixed>|null  $rawPayload
      */
     public static function validResult(
         ?int $envatoItemId,
@@ -38,6 +41,7 @@ class ValidationResultDTO extends Data
         array $domainRestrictions,
         string $source,
         string $matchedBy,
+        ?array $rawPayload = null,
     ): self {
         return new self(
             valid: true,
@@ -50,6 +54,7 @@ class ValidationResultDTO extends Data
             domainRestrictions: $domainRestrictions,
             source: $source,
             matchedBy: $matchedBy,
+            rawPayload: $rawPayload,
         );
     }
 
@@ -69,6 +74,7 @@ class ValidationResultDTO extends Data
             domainRestrictions: [],
             source: $source,
             matchedBy: $matchedBy,
+            rawPayload: null,
         );
     }
 }

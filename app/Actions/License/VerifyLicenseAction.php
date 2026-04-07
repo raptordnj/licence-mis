@@ -38,7 +38,11 @@ readonly class VerifyLicenseAction
             return $this->verifyExistingLicense($license, $normalizedDomain, $input->itemId);
         }
 
-        $verification = $this->envatoVerifier->verifyPurchaseCode($input->purchaseCode);
+        $verification = $this->envatoVerifier->verifyPurchaseCode(
+            $input->purchaseCode,
+            $input->itemId,
+            $input->productId,
+        );
 
         if (! $verification->valid) {
             throw new PurchaseInvalidException();

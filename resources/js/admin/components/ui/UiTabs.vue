@@ -1,14 +1,14 @@
 <template>
-    <div class="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-800 dark:bg-slate-900">
+    <div class="glass inline-flex rounded-xl p-1">
         <button
             v-for="tab in tabs"
             :key="tab.value"
             type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
+            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70"
             :class="
                 modelValue === tab.value
-                    ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-50'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100'
+                    ? 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-sm shadow-violet-500/20'
+                    : 'text-slate-600 hover:bg-white/60 hover:backdrop-blur dark:text-slate-300 dark:hover:bg-slate-800/60'
             "
             @click="emit('update:modelValue', tab.value)"
         >

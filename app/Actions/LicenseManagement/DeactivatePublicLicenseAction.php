@@ -118,7 +118,7 @@ readonly class DeactivatePublicLicenseAction
     private function validate(array $payload): array
     {
         $validator = Validator::make($payload, [
-            'purchase_code' => ['required', 'string', 'max:120'],
+            'purchase_code' => ['required', 'string', 'max:255'],
             'product_id' => ['nullable', 'integer', 'min:1', 'required_without:envato_item_id'],
             'envato_item_id' => ['nullable', 'integer', 'min:1', 'required_without:product_id'],
             'instance_id' => ['required', 'uuid'],

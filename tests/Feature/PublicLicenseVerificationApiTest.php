@@ -9,9 +9,11 @@ use App\Enums\LicenseStatus;
 use App\Models\License;
 use App\Models\LicenseInstance;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -114,6 +116,44 @@ class PublicLicenseVerificationApiTest extends TestCase
         $this->assertDatabaseHas('license_checks', [
             'result' => 'valid',
             'reason' => null,
+        ]);
+    }
+
+    public function test_verify_accepts_sha512_purchase_code_when_local_license_exists(): void
+    {
+        $product = Product::factory()->create([
+            'activation_limit' => 2,
+            'strict_domain_binding' => true,
+        ]);
+
+        $rawPurchaseCode = 'PCODE-HASHED-VERIFY-001';
+        $license = License::factory()->forProduct($product)->create([
+            'purchase_code' => $rawPurchaseCode,
+            'status' => LicenseStatus::VALID,
+            'bound_domain' => null,
+        ]);
+
+        $instanceId = (string) Str::uuid();
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => hash('sha512', $rawPurchaseCode),
+            'product_id' => $product->id,
+            'instance_id' => $instanceId,
+            'domain' => 'https://hashed.example.com/path',
+            'app_url' => 'https://hashed.example.com/app',
+            'app_version' => '5.0.0',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'valid');
+        $response->assertJsonPath('reason', null);
+        $response->assertJsonPath('instance_id', $instanceId);
+        $response->assertJsonPath('domain', 'hashed.example.com');
+
+        $this->assertDatabaseHas('license_instances', [
+            'license_id' => $license->id,
+            'instance_id' => $instanceId,
+            'domain' => 'hashed.example.com',
+            'status' => LicenseInstanceStatus::ACTIVE->value,
         ]);
     }
 
@@ -339,6 +379,77 @@ class PublicLicenseVerificationApiTest extends TestCase
         $response->assertJsonPath('reason', 'domain_mismatch');
     }
 
+    public function test_verify_allows_new_domain_after_admin_reset_domain_deactivates_old_instances(): void
+    {
+        $product = Product::factory()->create([
+            'activation_limit' => 3,
+            'strict_domain_binding' => true,
+        ]);
+
+        $license = License::factory()->forProduct($product)->create([
+            'purchase_code' => 'PCODE-RESET-DOMAIN-001',
+            'status' => LicenseStatus::VALID,
+            'bound_domain' => 'old.example.com',
+        ]);
+
+        $oldInstance = LicenseInstance::factory()->create([
+            'license_id' => $license->id,
+            'instance_id' => (string) Str::uuid(),
+            'status' => LicenseInstanceStatus::ACTIVE,
+            'domain' => 'old.example.com',
+            'app_url' => 'https://old.example.com',
+        ]);
+
+        $beforeResetResponse = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => $license->purchase_code,
+            'product_id' => $product->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'new.example.com',
+            'app_url' => 'https://new.example.com',
+            'app_version' => '3.1.0',
+        ]);
+
+        $beforeResetResponse->assertOk();
+        $beforeResetResponse->assertJsonPath('status', 'invalid');
+        $beforeResetResponse->assertJsonPath('reason', 'domain_mismatch');
+
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $this->postJson("/api/v1/admin/licenses/{$license->id}/reset-domain", [
+            'reason' => 'Customer migration',
+        ])->assertOk();
+
+        $oldInstance->refresh();
+        $this->assertSame(LicenseInstanceStatus::INACTIVE, $oldInstance->status);
+        $this->assertNotNull($oldInstance->deactivated_at);
+
+        $this->assertDatabaseHas('licenses', [
+            'id' => $license->id,
+            'bound_domain' => null,
+        ]);
+
+        $afterResetResponse = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => $license->purchase_code,
+            'product_id' => $product->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'new.example.com',
+            'app_url' => 'https://new.example.com',
+            'app_version' => '3.1.0',
+        ]);
+
+        $afterResetResponse->assertOk();
+        $afterResetResponse->assertJsonPath('status', 'valid');
+        $afterResetResponse->assertJsonPath('reason', null);
+        $afterResetResponse->assertJsonPath('domain', 'new.example.com');
+
+        $this->assertDatabaseHas('license_instances', [
+            'license_id' => $license->id,
+            'domain' => 'new.example.com',
+            'status' => LicenseInstanceStatus::ACTIVE->value,
+        ]);
+    }
+
     public function test_verify_reuses_existing_active_instance(): void
     {
         $product = Product::factory()->create([
@@ -446,6 +557,38 @@ class PublicLicenseVerificationApiTest extends TestCase
             'id' => $license->id,
             'bound_domain' => null,
         ]);
+    }
+
+    public function test_deactivate_accepts_sha512_purchase_code_when_local_license_exists(): void
+    {
+        $product = Product::factory()->create();
+        $rawPurchaseCode = 'PCODE-HASHED-DEACT-001';
+        $license = License::factory()->forProduct($product)->create([
+            'purchase_code' => $rawPurchaseCode,
+            'status' => LicenseStatus::VALID,
+            'bound_domain' => 'hashed-deactivated.example.com',
+        ]);
+
+        $instance = LicenseInstance::factory()->create([
+            'license_id' => $license->id,
+            'status' => LicenseInstanceStatus::ACTIVE,
+            'domain' => 'hashed-deactivated.example.com',
+            'app_url' => 'https://hashed-deactivated.example.com',
+        ]);
+
+        $response = $this->postJson('/api/licenses/deactivate', [
+            'purchase_code' => hash('sha512', $rawPurchaseCode),
+            'product_id' => $product->id,
+            'instance_id' => $instance->instance_id,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('reason', 'deactivated');
+
+        $instance->refresh();
+        $this->assertSame(LicenseInstanceStatus::INACTIVE, $instance->status);
+        $this->assertNotNull($instance->deactivated_at);
     }
 
     public function test_deactivate_returns_not_found_when_instance_is_missing(): void

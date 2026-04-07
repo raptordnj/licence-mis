@@ -53,7 +53,7 @@
             <template #cell-select="{ row }">
                 <input
                     type="checkbox"
-                    class="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900"
+                    class="h-4 w-4 rounded border-slate-300 text-violet-500 focus:ring-violet-400 dark:border-slate-700 dark:bg-slate-900"
                     :checked="licensesStore.selectedIds.includes(Number(row.id))"
                     @click.stop
                     @change="licensesStore.toggleSelection(Number(row.id))"
@@ -82,6 +82,14 @@
                         Reset Domain
                     </UiButton>
                     <UiButton
+                        v-if="canResetDomain"
+                        size="compact"
+                        variant="secondary"
+                        @click.stop="openResetActivationsDialog(Number(row.id), String(row.purchase_code))"
+                    >
+                        Reset Activations
+                    </UiButton>
+                    <UiButton
                         v-if="canRevoke"
                         size="compact"
                         variant="danger"
@@ -95,9 +103,9 @@
 
         <div class="flex items-center justify-end gap-2">
             <UiButton size="compact" variant="secondary" :disabled="query.page <= 1" @click="query.page -= 1">Previous</UiButton>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-                Page {{ licensesStore.response.current_page }} of {{ licensesStore.response.last_page }}
-            </p>
+            <span class="pagination-glass text-xs text-slate-600 dark:text-slate-300">
+                {{ licensesStore.response.current_page }} / {{ licensesStore.response.last_page }}
+            </span>
             <UiButton size="compact" variant="secondary" :disabled="licensesStore.response.current_page >= licensesStore.response.last_page" @click="query.page += 1">
                 Next
             </UiButton>
@@ -209,7 +217,7 @@ const marketplaceOptions = [
     { label: 'Envato', value: 'envato' },
 ];
 
-type PendingAction = 'revoke' | 'reset' | null;
+type PendingAction = 'revoke' | 'reset' | 'reset_activations' | null;
 
 const pendingAction = ref<PendingAction>(null);
 const pendingLicenseId = ref<number | null>(null);
@@ -223,14 +231,24 @@ const reasonModalTitle = computed(() => {
         return `Revoke ${pendingLicenseCode.value}`;
     }
 
+    if (pendingAction.value === 'reset_activations') {
+        return `Reset Activations for ${pendingLicenseCode.value}`;
+    }
+
     return `Reset Domain for ${pendingLicenseCode.value}`;
 });
 
-const reasonModalDescription = computed(() =>
-    pendingAction.value === 'revoke'
-        ? 'Provide a clear reason for this revocation.'
-        : 'Provide a reason for resetting the bound domain.',
-);
+const reasonModalDescription = computed(() => {
+    if (pendingAction.value === 'revoke') {
+        return 'Provide a clear reason for this revocation.';
+    }
+
+    if (pendingAction.value === 'reset_activations') {
+        return 'Provide a reason for clearing active instances to resolve activation limits.';
+    }
+
+    return 'Provide a reason for resetting the bound domain.';
+});
 
 const openRevokeDialog = (licenseId: number, code: string): void => {
     pendingAction.value = 'revoke';
@@ -248,6 +266,14 @@ const openResetDialog = (licenseId: number, code: string): void => {
     reasonModalOpen.value = true;
 };
 
+const openResetActivationsDialog = (licenseId: number, code: string): void => {
+    pendingAction.value = 'reset_activations';
+    pendingLicenseId.value = licenseId;
+    pendingLicenseCode.value = code;
+    reason.value = '';
+    reasonModalOpen.value = true;
+};
+
 const confirmReasonAction = async (): Promise<void> => {
     if (pendingLicenseId.value === null) {
         return;
@@ -257,6 +283,8 @@ const confirmReasonAction = async (): Promise<void> => {
         await licensesStore.revokeLicense(pendingLicenseId.value, reason.value);
     } else if (pendingAction.value === 'reset') {
         await licensesStore.resetDomain(pendingLicenseId.value, reason.value);
+    } else if (pendingAction.value === 'reset_activations') {
+        await licensesStore.resetActivations(pendingLicenseId.value, reason.value);
     }
 
     reasonModalOpen.value = false;

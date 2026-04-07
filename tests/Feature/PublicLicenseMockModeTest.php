@@ -200,6 +200,55 @@ class PublicLicenseMockModeTest extends TestCase
         ]);
     }
 
+    public function test_verify_falls_back_to_buyer_endpoint_when_author_sale_returns_not_found(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $product = Product::factory()->create([
+            'envato_item_id' => 47008,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*/author/sale*' => Http::response([
+                'error' => 'No sale found for this code.',
+            ], 404),
+            'https://api.envato.com/*/buyer/purchase*' => Http::response([
+                'matches' => [
+                    [
+                        'buyer' => 'buyer-scope-user',
+                        'supported_until' => '2033-12-31T00:00:00+00:00',
+                        'item' => [
+                            'id' => $product->envato_item_id,
+                            'name' => 'Buyer Scope Item',
+                        ],
+                    ],
+                ],
+            ], 200),
+            'https://api.envato.com/*' => Http::response([], 500),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => 'REAL-API-BUYER-FALLBACK-001',
+            'product_id' => $product->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'buyer-fallback.example.com',
+            'app_url' => 'https://buyer-fallback.example.com',
+            'app_version' => '5.0.8',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'valid');
+        $response->assertJsonPath('reason', null);
+
+        Http::assertSent(static fn (HttpRequest $request): bool => str_contains($request->url(), '/author/sale'));
+        Http::assertSent(static fn (HttpRequest $request): bool => str_contains($request->url(), '/buyer/purchase'));
+
+        $this->assertDatabaseHas('licenses', [
+            'purchase_code' => 'REAL-API-BUYER-FALLBACK-001',
+            'product_id' => $product->id,
+        ]);
+    }
+
     public function test_verify_uses_local_database_after_first_successful_envato_verification(): void
     {
         config()->set('license_manager.envato_mock.mode', false);
@@ -295,6 +344,307 @@ class PublicLicenseMockModeTest extends TestCase
         $response->assertJsonPath('reason', 'domain_mismatch');
 
         Http::assertNothingSent();
+    }
+
+    public function test_verify_uses_existing_local_purchase_without_calling_envato(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $product = Product::factory()->create([
+            'envato_item_id' => 47009,
+        ]);
+
+        $license = License::factory()->create([
+            'product_id' => null,
+            'purchase_code' => 'EXISTING-LOCAL-CODE-001',
+            'envato_item_id' => $product->envato_item_id,
+            'status' => LicenseStatus::VALID,
+            'bound_domain' => null,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*' => Http::response([
+                'matches' => [
+                    [
+                        'buyer' => 'should-not-be-called',
+                        'supported_until' => '2034-12-31T00:00:00+00:00',
+                        'item' => [
+                            'id' => $product->envato_item_id,
+                            'name' => 'Should Not Be Called',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => '  EXISTING-LOCAL-CODE-001  ',
+            'product_id' => $product->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'existing-local.example.com',
+            'app_url' => 'https://existing-local.example.com',
+            'app_version' => '5.1.0',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'valid');
+        $response->assertJsonPath('reason', null);
+        $response->assertJsonPath('product_id', $product->id);
+
+        $this->assertDatabaseHas('licenses', [
+            'id' => $license->id,
+            'purchase_code' => 'EXISTING-LOCAL-CODE-001',
+            'product_id' => $product->id,
+        ]);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_verify_uses_local_license_product_when_request_product_is_wrong(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $correctProduct = Product::factory()->create([
+            'envato_item_id' => 47020,
+        ]);
+
+        $wrongProduct = Product::factory()->create([
+            'envato_item_id' => 47021,
+        ]);
+
+        License::factory()->forProduct($correctProduct)->create([
+            'purchase_code' => 'LOCAL-WRONG-PRODUCT-001',
+            'status' => LicenseStatus::VALID,
+            'bound_domain' => null,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*' => Http::response([
+                'matches' => [
+                    [
+                        'buyer' => 'should-not-call',
+                        'supported_until' => '2034-12-31T00:00:00+00:00',
+                        'item' => [
+                            'id' => $correctProduct->envato_item_id,
+                            'name' => 'Should Not Call',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => 'LOCAL-WRONG-PRODUCT-001',
+            'product_id' => $wrongProduct->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'wrong-product.example.com',
+            'app_url' => 'https://wrong-product.example.com',
+            'app_version' => '5.1.05',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'valid');
+        $response->assertJsonPath('reason', null);
+        $response->assertJsonPath('product_id', $correctProduct->id);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_verify_resolves_correct_product_from_envato_when_requested_product_is_wrong(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $wrongProduct = Product::factory()->create([
+            'envato_item_id' => 47030,
+        ]);
+
+        $correctProduct = Product::factory()->create([
+            'envato_item_id' => 47031,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*' => Http::response([
+                'matches' => [
+                    [
+                        'buyer' => 'resolved-from-envato',
+                        'supported_until' => '2036-12-31T00:00:00+00:00',
+                        'item' => [
+                            'id' => $correctProduct->envato_item_id,
+                            'name' => 'Resolved Product Item',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => 'ENVATO-RESOLVE-PRODUCT-001',
+            'product_id' => $wrongProduct->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'resolve-product.example.com',
+            'app_url' => 'https://resolve-product.example.com',
+            'app_version' => '5.1.06',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'valid');
+        $response->assertJsonPath('reason', null);
+        $response->assertJsonPath('product_id', $correctProduct->id);
+
+        $this->assertDatabaseHas('licenses', [
+            'purchase_code' => 'ENVATO-RESOLVE-PRODUCT-001',
+            'product_id' => $correctProduct->id,
+            'envato_item_id' => $correctProduct->envato_item_id,
+        ]);
+    }
+
+    public function test_verify_falls_back_to_requested_product_when_envato_item_has_no_local_mapping(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $requestedProduct = Product::factory()->create([
+            'envato_item_id' => 47040,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*' => Http::response([
+                'matches' => [
+                    [
+                        'buyer' => 'fallback-requested-product',
+                        'supported_until' => '2037-12-31T00:00:00+00:00',
+                        'item' => [
+                            'id' => 47999,
+                            'name' => 'Unmapped Envato Item',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => 'ENVATO-FALLBACK-REQUESTED-001',
+            'product_id' => $requestedProduct->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'fallback-requested.example.com',
+            'app_url' => 'https://fallback-requested.example.com',
+            'app_version' => '5.1.07',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'valid');
+        $response->assertJsonPath('reason', null);
+        $response->assertJsonPath('product_id', $requestedProduct->id);
+
+        $this->assertDatabaseHas('licenses', [
+            'purchase_code' => 'ENVATO-FALLBACK-REQUESTED-001',
+            'product_id' => $requestedProduct->id,
+            'envato_item_id' => 47999,
+        ]);
+    }
+
+    public function test_verify_saves_license_when_envato_valid_and_local_missing(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $product = Product::factory()->create([
+            'envato_item_id' => 47010,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*' => Http::response([
+                'matches' => [
+                    [
+                        'buyer' => 'envato-save-buyer',
+                        'supported_until' => '2035-12-31T00:00:00+00:00',
+                        'item' => [
+                            'id' => $product->envato_item_id,
+                            'name' => 'Envato Persisted Item',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => '  NEW-ENVATO-VALID-001  ',
+            'product_id' => $product->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'envato-save.example.com',
+            'app_url' => 'https://envato-save.example.com',
+            'app_version' => '5.1.1',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'valid');
+        $response->assertJsonPath('reason', null);
+
+        $this->assertDatabaseHas('licenses', [
+            'purchase_code' => 'NEW-ENVATO-VALID-001',
+            'product_id' => $product->id,
+            'buyer' => 'envato-save-buyer',
+            'envato_item_id' => $product->envato_item_id,
+            'status' => LicenseStatus::VALID->value,
+        ]);
+    }
+
+    public function test_verify_returns_not_found_when_envato_reports_missing_purchase(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $product = Product::factory()->create([
+            'envato_item_id' => 47011,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*' => Http::response([
+                'error' => 'No purchase found for the given code.',
+            ], 404),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => 'NEW-ENVATO-NOT-FOUND-001',
+            'product_id' => $product->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'envato-missing.example.com',
+            'app_url' => 'https://envato-missing.example.com',
+            'app_version' => '5.1.2',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'invalid');
+        $response->assertJsonPath('reason', 'not_found');
+
+        $this->assertDatabaseMissing('licenses', [
+            'purchase_code' => 'NEW-ENVATO-NOT-FOUND-001',
+            'product_id' => $product->id,
+        ]);
+    }
+
+    public function test_verify_returns_envato_unavailable_envelope_when_provider_fails(): void
+    {
+        config()->set('license_manager.envato_mock.mode', false);
+
+        $product = Product::factory()->create([
+            'envato_item_id' => 47012,
+        ]);
+
+        Http::fake([
+            'https://api.envato.com/*' => Http::response([], 500),
+        ]);
+
+        $response = $this->postJson('/api/licenses/verify', [
+            'purchase_code' => 'NEW-ENVATO-UNAVAILABLE-001',
+            'product_id' => $product->id,
+            'instance_id' => (string) Str::uuid(),
+            'domain' => 'envato-unavailable.example.com',
+            'app_url' => 'https://envato-unavailable.example.com',
+            'app_version' => '5.1.3',
+        ]);
+
+        $response->assertStatus(503);
+        $response->assertJsonPath('success', false);
+        $response->assertJsonPath('error.code', 'ENVATO_UNAVAILABLE');
+        $response->assertJsonPath('error.message', 'Verification provider is currently unavailable.');
     }
 
     public function test_admin_setting_can_toggle_mock_mode_runtime_behavior(): void

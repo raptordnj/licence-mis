@@ -7,19 +7,22 @@
         />
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold">Typography</h2>
-            <div class="space-y-2">
-                <p class="text-3xl font-semibold">Heading 1 - SaaS Admin</p>
-                <p class="text-xl font-semibold">Heading 2 - Section Title</p>
+            <h2 class="font-display text-base font-semibold">Typography</h2>
+            <div class="space-y-3">
+                <p class="font-display text-3xl font-bold tracking-tight">Display — Space Grotesk Bold</p>
+                <p class="font-display text-2xl font-bold tracking-tight">Page Title — Space Grotesk Bold</p>
+                <p class="font-display text-lg font-semibold">Section Heading — Space Grotesk Semibold</p>
                 <p class="text-sm text-slate-600 dark:text-slate-300">
-                    Body text should remain concise and readable with clear hierarchy.
+                    Body text uses Inter for maximum readability at small sizes. Clean, neutral, and optimized for screens.
                 </p>
-                <p class="font-mono text-xs text-slate-500 dark:text-slate-400">Monospace for codes and identifiers</p>
+                <p class="type-label">Label — Uppercase Micro (type-label)</p>
+                <p class="type-caption text-slate-400 dark:text-slate-500">Caption — Tiny hint text (type-caption)</p>
+                <p class="font-mono text-xs text-slate-500 dark:text-slate-400">Monospace — JetBrains Mono for codes and identifiers</p>
             </div>
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold">Colors & Badges</h2>
+            <h2 class="font-display text-base font-semibold">Colors & Badges</h2>
             <div class="flex flex-wrap items-center gap-2">
                 <UiBadge tone="neutral">Neutral</UiBadge>
                 <UiBadge tone="success">Success</UiBadge>
@@ -36,7 +39,7 @@
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold">Buttons, Inputs, Selects</h2>
+            <h2 class="font-display text-base font-semibold">Buttons, Inputs, Selects</h2>
             <div class="flex flex-wrap gap-2">
                 <UiButton>Primary</UiButton>
                 <UiButton variant="secondary">Secondary</UiButton>
@@ -50,7 +53,7 @@
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold">Tabs, Skeleton, Empty State</h2>
+            <h2 class="font-display text-base font-semibold">Tabs, Skeleton, Empty State</h2>
             <UiTabs v-model="tabSample" :tabs="tabOptions" />
             <div class="grid gap-2 md:grid-cols-3">
                 <UiSkeleton height="1.2rem" />
@@ -61,12 +64,12 @@
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold">DataTable</h2>
+            <h2 class="font-display text-base font-semibold">DataTable</h2>
             <DataTable :columns="tableColumns" :rows="tableRows" />
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold">JSON Viewer & Error Banner</h2>
+            <h2 class="font-display text-base font-semibold">JSON Viewer & Error Banner</h2>
             <ErrorBanner message="Example error banner with actionable content." />
             <JsonViewer :value="{ key: 'value', nested: { feature: true } }" />
         </UiCard>

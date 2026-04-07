@@ -12,7 +12,7 @@
 
         <UiCard v-if="codes.length > 0" class="space-y-4">
             <ul class="grid gap-2 sm:grid-cols-2">
-                <li v-for="code in codes" :key="code" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm dark:border-slate-800 dark:bg-slate-950">
+                <li v-for="code in codes" :key="code" class="glass rounded-lg px-3 py-2 font-mono text-sm">
                     {{ code }}
                 </li>
             </ul>

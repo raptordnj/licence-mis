@@ -9,7 +9,7 @@
         <ErrorBanner v-if="settingsStore.error !== null" :message="settingsStore.error.message" />
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">1) Integration</h2>
+            <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">1) Integration</h2>
             <div class="grid gap-3 sm:grid-cols-2">
                 <p class="text-sm">
                     Envato token:
@@ -34,7 +34,7 @@
                 <input
                     v-model="integration.mockMode"
                     type="checkbox"
-                    class="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900"
+                    class="h-4 w-4 rounded border-slate-300 text-violet-500 focus:ring-violet-400 dark:border-slate-700 dark:bg-slate-900"
                 />
                 Enable Envato mock mode
             </label>
@@ -46,7 +46,7 @@
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">2) Security</h2>
+            <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">2) Security</h2>
             <div class="grid gap-3 sm:grid-cols-2">
                 <p class="text-sm text-slate-600 dark:text-slate-300">
                     Active secret version:
@@ -75,13 +75,13 @@
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">3) License Policies</h2>
+            <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">3) License Policies</h2>
             <div class="grid gap-3 md:grid-cols-3">
                 <label class="flex items-center gap-2 text-sm">
                     <input
                         v-model="policies.treatWwwAsSame"
                         type="checkbox"
-                        class="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900"
+                        class="h-4 w-4 rounded border-slate-300 text-violet-500 focus:ring-violet-400 dark:border-slate-700 dark:bg-slate-900"
                     />
                     Treat `www` as same domain
                 </label>
@@ -89,7 +89,7 @@
                     <input
                         v-model="policies.allowLocalhost"
                         type="checkbox"
-                        class="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900"
+                        class="h-4 w-4 rounded border-slate-300 text-violet-500 focus:ring-violet-400 dark:border-slate-700 dark:bg-slate-900"
                     />
                     Allow localhost
                 </label>
@@ -97,7 +97,7 @@
                     <input
                         v-model="policies.allowIpDomains"
                         type="checkbox"
-                        class="h-4 w-4 rounded border-slate-300 text-cyan-500 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900"
+                        class="h-4 w-4 rounded border-slate-300 text-violet-500 focus:ring-violet-400 dark:border-slate-700 dark:bg-slate-900"
                     />
                     Allow IP domains
                 </label>
@@ -106,7 +106,7 @@
         </UiCard>
 
         <UiCard class="space-y-3">
-            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">4) System</h2>
+            <h2 class="section-heading font-display text-base font-semibold text-slate-900 dark:text-slate-100">4) System</h2>
             <div class="grid gap-2 sm:grid-cols-3">
                 <p class="text-sm text-slate-600 dark:text-slate-300">Queue status: <span class="font-medium">Healthy</span></p>
                 <p class="text-sm text-slate-600 dark:text-slate-300">Cache status: <span class="font-medium">Warm</span></p>

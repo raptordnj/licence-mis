@@ -14,7 +14,6 @@ use App\Exceptions\PurchaseInvalidException;
 use App\Models\License;
 use App\Repositories\LicenseRepositoryInterface;
 use App\Services\Contracts\EnvatoVerifierInterface;
-use App\Services\SignatureService;
 use App\Support\DomainNormalizer;
 use Illuminate\Support\Carbon;
 
@@ -24,7 +23,6 @@ readonly class VerifyLicenseAction
         private LicenseRepositoryInterface $licenseRepository,
         private EnvatoVerifierInterface $envatoVerifier,
         private DomainNormalizer $domainNormalizer,
-        private SignatureService $signatureService,
     ) {
     }
 
@@ -97,20 +95,13 @@ readonly class VerifyLicenseAction
         $status = $this->resolveStatus($license);
         $boundDomain = (string) ($license->bound_domain ?? '');
 
-        $signaturePayload = [
-            'purchase_code' => $license->purchase_code,
-            'status' => $status->value,
-            'bound_domain' => $boundDomain,
-            'envato_item_id' => $license->envato_item_id,
-        ];
-
         return new LicenseVerificationResponseData(
             purchaseCode: $license->purchase_code,
             status: $status,
             boundDomain: $boundDomain,
             envatoItemId: (int) $license->envato_item_id,
             supportedUntil: $this->supportedUntilToIsoString($license),
-            signature: (string) $this->signatureService->sign($signaturePayload),
+            signature: null,
         );
     }
 

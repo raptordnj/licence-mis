@@ -22,7 +22,6 @@ class LicenseVerificationWorkflowTest extends TestCase
 
         config()->set('license_manager.envato_mock.mode', true);
         config()->set('license_manager.envato_mock.allowed_prefixes', ['valid-']);
-        config()->set('services.license.hmac_key', 'testing-hmac-key');
     }
 
     public function test_it_binds_domain_on_first_verification(): void
@@ -131,5 +130,20 @@ class LicenseVerificationWorkflowTest extends TestCase
             'id' => $license->id,
             'bound_domain' => 'new-domain.test',
         ]);
+    }
+
+    public function test_it_verifies_without_hmac_key_configured(): void
+    {
+        config()->set('services.license.hmac_key', '');
+
+        $response = $this->postJson('/api/v1/licenses/verify', [
+            'purchase_code' => 'valid-no-hmac-key',
+            'domain' => 'no-hmac-key.example.com',
+            'item_id' => 1000,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('data.signature', null);
     }
 }
